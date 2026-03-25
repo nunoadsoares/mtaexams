@@ -70,6 +70,7 @@ export function QuizDashboard() {
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sessionReport, setSessionReport] = useState<SessionReport | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
   const [isStartingQuiz, setIsStartingQuiz] = useState(false);
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [message, setMessage] = useState("");
@@ -87,6 +88,19 @@ export function QuizDashboard() {
   const currentDraftSelection = currentQuestion ? draftSelections[currentQuestion.id] : undefined;
   const progressPercent =
     quizQuestions.length > 0 ? Math.max(4, Math.round((answeredCount / quizQuestions.length) * 100)) : 0;
+  const reviewItems = useMemo(
+    () =>
+      quizQuestions.map((question, index) => {
+        const answer = answers[question.id];
+        return {
+          index: index + 1,
+          question,
+          selectedAnswers: answer?.selectedAnswers ?? [],
+          isCorrect: answer?.isCorrect ?? false,
+        };
+      }),
+    [answers, quizQuestions]
+  );
 
   useEffect(() => {
     void refreshStats();
@@ -111,6 +125,7 @@ export function QuizDashboard() {
     setIsStartingQuiz(true);
     setMessage("");
     setSessionReport(null);
+    setIsReviewing(false);
 
     const response = await fetch("/api/quiz/start", {
       method: "POST",
@@ -219,6 +234,7 @@ export function QuizDashboard() {
       passed: data.passed,
       passThreshold: data.passThreshold,
     });
+    setIsReviewing(false);
     setIsSubmittingQuiz(false);
     await refreshStats();
   }
@@ -230,7 +246,14 @@ export function QuizDashboard() {
     setAnswers({});
     setCurrentIndex(0);
     setSessionReport(null);
+    setIsReviewing(false);
     setMessage("");
+  }
+
+  function retryQuiz() {
+    const nextLimit = Math.min(Math.max(quizQuestions.length || limit, 1), 50);
+    resetQuiz();
+    void startQuiz(nextLimit);
   }
 
   return (
@@ -489,58 +512,166 @@ export function QuizDashboard() {
         </section>
       ) : null}
 
-      {sessionReport ? (
+      {sessionReport && !isReviewing ? (
         <section className="overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,18,31,0.96),rgba(8,12,20,0.98))] px-6 py-8 shadow-[0_35px_90px_rgba(0,0,0,0.48)] sm:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-[#8aa5d7]">Session Report</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">
-                {sessionReport.passed ? "Passaste esta sessao." : "Ainda nao chegaste aos 70%."}
+              <p className="text-xs uppercase tracking-[0.28em] text-[#8aa5d7]">Resumo do quiz</p>
+              <h2
+                className={`mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-5xl ${sessionReport.passed ? "text-[#9fe4b4]" : "text-[#ff8f8f]"}`}
+              >
+                {sessionReport.passed ? "APROVADO" : "Chumbaste!!!"}
               </h2>
+              <p className="mt-4 text-sm text-[#b8c7e5] sm:text-base">
+                {sessionReport.passed
+                  ? `Conseguiste ${sessionReport.accuracy}% e passaste com sucesso.`
+                  : `Ficaste com ${sessionReport.accuracy}%. Precisavas de ${sessionReport.passThreshold}% para passar.`}
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={resetQuiz}
-              className="rounded-full bg-[linear-gradient(180deg,#bbd0ff_0%,#92b3ff_100%)] px-6 py-3 text-sm font-semibold text-[#09162f] shadow-[0_12px_30px_rgba(92,130,255,0.35)] transition hover:brightness-105"
-            >
-              Novo quiz
-            </button>
+
+            {!sessionReport.passed ? (
+              <div className="flex w-full justify-center sm:w-auto sm:justify-end">
+                <div className="relative h-40 w-28 rounded-xl border-2 border-[#ff5d5d] bg-[linear-gradient(180deg,#ff5d5d_0%,#c51f2c_100%)] shadow-[0_16px_35px_rgba(197,31,44,0.45)] sm:rotate-[-8deg]">
+                  <span className="absolute left-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/60 bg-white/10 text-xs font-bold text-white">
+                    !
+                  </span>
+                  <p className="absolute bottom-4 left-0 w-full text-center text-xs font-bold uppercase tracking-[0.18em] text-white">
+                    CHUMBASTE
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[26px] border border-white/8 bg-white/[0.04] p-5">
+            <div className="rounded-[24px] border border-white/8 bg-white/[0.04] p-5">
               <p className="text-xs uppercase tracking-[0.24em] text-[#7e97c4]">Resultado</p>
-              <p className={`mt-3 text-3xl font-semibold ${sessionReport.passed ? "text-[#9fe4b4]" : "text-[#ffacb4]"}`}>
-                {sessionReport.passed ? "PASSOU" : "REPROVOU"}
+              <p className={`mt-3 text-3xl font-semibold ${sessionReport.passed ? "text-[#9fe4b4]" : "text-[#ff8f8f]"}`}>
+                {sessionReport.passed ? "PASSOU" : "FALHOU"}
               </p>
             </div>
-            <div className="rounded-[26px] border border-white/8 bg-white/[0.04] p-5">
+            <div className="rounded-[24px] border border-white/8 bg-white/[0.04] p-5">
+              <p className="text-xs uppercase tracking-[0.24em] text-[#7e97c4]">Nota</p>
+              <p className="mt-3 text-3xl font-semibold text-[#b9ccff]">{sessionReport.accuracy}%</p>
+            </div>
+            <div className="rounded-[24px] border border-white/8 bg-white/[0.04] p-5">
               <p className="text-xs uppercase tracking-[0.24em] text-[#7e97c4]">Score</p>
               <p className="mt-3 text-3xl font-semibold text-white">
                 {sessionReport.score}/{sessionReport.total}
               </p>
             </div>
-            <div className="rounded-[26px] border border-white/8 bg-white/[0.04] p-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-[#7e97c4]">Accuracy</p>
-              <p className="mt-3 text-3xl font-semibold text-[#b9ccff]">{sessionReport.accuracy}%</p>
-            </div>
-            <div className="rounded-[26px] border border-white/8 bg-white/[0.04] p-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-[#7e97c4]">Certo / Errado</p>
-              <p className="mt-3 text-3xl font-semibold text-white">
-                {sessionReport.correctAnswers}/{sessionReport.wrongAnswers}
-              </p>
+            <div className="rounded-[24px] border border-white/8 bg-white/[0.04] p-5">
+              <p className="text-xs uppercase tracking-[0.24em] text-[#7e97c4]">Meta</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{sessionReport.passThreshold}%</p>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-[#9db0d5]">
-            <p className="rounded-full border border-[#26426f] bg-[#0f1831] px-4 py-2">
-              Meta minima: {sessionReport.passThreshold}%
-            </p>
-            {stats ? (
-              <p className="rounded-full border border-white/8 bg-white/[0.04] px-4 py-2">
-                Global: {stats.completedSessions} sessoes, {stats.passRate}% pass rate, {stats.accuracy}% accuracy
-              </p>
-            ) : null}
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsReviewing(true)}
+              className="rounded-full border border-[#35548f] bg-[#131f3a] px-6 py-3 text-sm font-semibold text-[#c8d8ff] transition hover:bg-[#1a2a4e]"
+            >
+              Rever teste
+            </button>
+            <button
+              type="button"
+              onClick={retryQuiz}
+              className="rounded-full bg-[linear-gradient(180deg,#bbd0ff_0%,#92b3ff_100%)] px-6 py-3 text-sm font-semibold text-[#09162f] shadow-[0_12px_30px_rgba(92,130,255,0.35)] transition hover:brightness-105"
+            >
+              Voltar a fazer
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {sessionReport && isReviewing ? (
+        <section className="overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(11,16,28,0.98),rgba(7,10,18,1))] px-6 py-8 shadow-[0_35px_90px_rgba(0,0,0,0.48)] sm:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-[#8aa5d7]">Revisao do teste</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white sm:text-4xl">
+                Perguntas certas e erradas
+              </h2>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setIsReviewing(false)}
+                className="rounded-full border border-[#35548f] bg-[#131f3a] px-5 py-2 text-sm font-semibold text-[#c8d8ff] transition hover:bg-[#1a2a4e]"
+              >
+                Voltar ao resumo
+              </button>
+              <button
+                type="button"
+                onClick={retryQuiz}
+                className="rounded-full bg-[linear-gradient(180deg,#bbd0ff_0%,#92b3ff_100%)] px-5 py-2 text-sm font-semibold text-[#09162f] transition hover:brightness-105"
+              >
+                Voltar a fazer
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-4">
+            {reviewItems.map((item) => (
+              <article
+                key={item.question.id}
+                className={`rounded-[22px] border p-5 ${item.isCorrect ? "border-[#2f5f47] bg-[linear-gradient(180deg,rgba(22,40,30,0.92),rgba(17,30,24,0.95))]" : "border-[#6f2f3a] bg-[linear-gradient(180deg,rgba(46,23,29,0.92),rgba(34,18,23,0.95))]"}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#adc1e8]">
+                    Pergunta {item.index}
+                  </p>
+                  <p
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${item.isCorrect ? "bg-[#1f4731] text-[#9fe4b4]" : "bg-[#57222d] text-[#ffb0b8]"}`}
+                  >
+                    {item.isCorrect ? "Correta" : "Errada"}
+                  </p>
+                </div>
+
+                <p className="mt-3 text-sm font-semibold text-white sm:text-base">{item.question.prompt}</p>
+
+                <div className="mt-4 grid gap-2">
+                  {item.question.options.map((option) => {
+                    const isCorrectOption = item.question.correctAnswers.some(
+                      (correctAnswer) =>
+                        normalizeForComparison(correctAnswer) === normalizeForComparison(option.text)
+                    );
+                    const isSelected = item.selectedAnswers.some(
+                      (selectedAnswer) =>
+                        normalizeForComparison(selectedAnswer) === normalizeForComparison(option.text)
+                    );
+
+                    let optionClass = "border-white/10 bg-white/[0.03]";
+
+                    if (isCorrectOption && isSelected) {
+                      optionClass = "border-[#3f8a61] bg-[#1f4731]";
+                    } else if (isCorrectOption) {
+                      optionClass = "border-[#3f8a61] bg-[#183727]";
+                    } else if (isSelected) {
+                      optionClass = "border-[#9a3e4a] bg-[#4d1f29]";
+                    }
+
+                    return (
+                      <div
+                        key={option.id}
+                        className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${optionClass}`}
+                      >
+                        <p className="text-xs text-[#edf3ff] sm:text-sm">
+                          <span className="mr-2 font-semibold text-[#c6d7ff]">{option.label}.</span>
+                          {option.text}
+                        </p>
+                        {isCorrectOption ? (
+                          <span className="text-[11px] font-semibold uppercase text-[#9fe4b4]">Correta</span>
+                        ) : isSelected ? (
+                          <span className="text-[11px] font-semibold uppercase text-[#ffb0b8]">Escolhida</span>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
           </div>
         </section>
       ) : null}

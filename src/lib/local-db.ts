@@ -324,15 +324,15 @@ function normalizeStoredQuestion(question: LegacyStoredQuestion): StoredQuestion
 
 function getKnowledgeRank(accuracy: number): string {
   if (accuracy >= 90) {
-    return "Quiz Master";
+    return "Mestre do Quiz";
   }
   if (accuracy >= 80) {
-    return "Knowledge Pro";
+    return "Conhecimento Pro";
   }
   if (accuracy >= 70) {
-    return "Rising Learner";
+    return "Aprendiz em Ascensão";
   }
-  return "Needs Practice";
+  return "Precisa de Reforço";
 }
 
 export async function getAllQuestions(): Promise<StoredQuestion[]> {
@@ -586,8 +586,8 @@ export async function submitQuizSession(sessionId: string, answers: SubmitAnswer
         }))
         .sort((a, b) => b.accuracy - a.accuracy),
       sessionMessage: passed
-        ? "Parabens! Passaste esta sessao."
-        : "Ainda nao passaste. Revemos os erros e tentamos outra vez.",
+        ? "Parabéns! Passaste esta sessão."
+        : "Ainda não passaste. Vamos rever os erros e tentar outra vez.",
     };
   });
 }
@@ -755,12 +755,12 @@ export async function getProfileSummary() {
     const topicAccuracy = computeAccuracy(topic.timesCorrect, topic.timesSeen);
     const masteryLabel =
       topicAccuracy >= 85
-        ? "Mastered"
+        ? "Dominada"
         : topicAccuracy >= 70
-          ? "Solid"
+          ? "Sólida"
           : topicAccuracy >= 50
-            ? "Growing"
-            : "Needs Work";
+            ? "A Evoluir"
+            : "Precisa de Reforço";
 
     return {
       ...topic,
@@ -787,36 +787,37 @@ export async function getProfileSummary() {
       level,
       currentLevelXp,
       nextLevelXp,
+      currentStreak: overview.recentPassStreak,
       badges: [
         {
           id: "first_session",
-          title: "First Run",
-          description: "Completa 1 sessao.",
+          title: "Primeira Volta",
+          description: "Completa 1 sessão.",
           unlocked: sessions.length >= 1,
         },
         {
           id: "consistent",
-          title: "Consistent Learner",
-          description: "Completa 10 sessoes.",
+          title: "Ritmo Consistente",
+          description: "Completa 10 sessões.",
           unlocked: sessions.length >= 10,
         },
         {
           id: "pass_master",
-          title: "Pass Master",
-          description: "Taxa de aprovacao global acima de 70%.",
+          title: "Mestre da Aprovação",
+          description: "Taxa de aprovação global acima de 70%.",
           unlocked: overview.passRate >= 70,
         },
         {
           id: "accuracy_elite",
-          title: "Accuracy Elite",
+          title: "Precisão de Elite",
           description: "Taxa de acerto global acima de 85%.",
           unlocked: overview.accuracy >= 85,
         },
         {
           id: "category_ninja",
-          title: "Category Ninja",
-          description: "Ter pelo menos 3 categorias com mastery Mastered.",
-          unlocked: categoryMastery.filter((category) => category.masteryLabel === "Mastered").length >= 3,
+          title: "Ninja das Categorias",
+          description: "Ter pelo menos 3 categorias com nível Dominada.",
+          unlocked: categoryMastery.filter((category) => category.masteryLabel === "Dominada").length >= 3,
         },
       ],
     },
