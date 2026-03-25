@@ -1,30 +1,15 @@
-# MTA Quiz Local
+# MTA Quiz App
 
-App local-first para estudo com:
-
-- Importacao de perguntas a partir de PDF.
-- Quiz em varios modos (aleatorio, erradas, nunca vistas).
-- Estatisticas de desempenho e perguntas mais falhadas.
-- Persistencia local com SQLite.
+App de estudo interativa com quiz, feedback imediato, estatisticas por sessao e perfil global.
 
 ## Stack
 
 - Next.js + TypeScript
 - Tailwind CSS
-- Prisma ORM
-- SQLite
-- Zod para validacao de estrutura das perguntas
+- Store local em JSON (`data/quiz-store.json`)
+- Parser de PDF para importar perguntas
 
-## Estrutura principal
-
-- API de importacao PDF: `src/app/api/import/route.ts`
-- API de iniciar quiz: `src/app/api/quiz/start/route.ts`
-- API de submissao de quiz: `src/app/api/quiz/[sessionId]/submit/route.ts`
-- API de estatisticas: `src/app/api/stats/overview/route.ts`
-- Parser PDF: `src/lib/importers/pdf.ts`
-- Schema Prisma: `prisma/schema.prisma`
-
-## Como correr
+## Correr localmente
 
 1. Instalar dependencias
 
@@ -32,35 +17,37 @@ App local-first para estudo com:
 npm install
 ```
 
-2. Criar/atualizar base de dados local
-
-```bash
-npm run db:push
-```
-
-3. Correr app
+2. Iniciar em dev
 
 ```bash
 npm run dev
 ```
 
-4. Abrir no browser
+3. Abrir no browser
 
 ```text
 http://localhost:3000
 ```
 
-## Notas sobre PDF
+## Deploy rapido (Vercel - gratuito)
 
-- O endpoint de importacao tenta encontrar automaticamente o primeiro ficheiro PDF na pasta pai do projeto (`../`).
-- Como o teu PDF esta em `MTAQUIZZ`, funciona se correres a app a partir de `MTAQUIZZ/quiz-app`.
-- Se precisares, podes adaptar o endpoint para receber um caminho explicito no body (`sourcePath`).
+1. Ir a `https://vercel.com/new`
+2. Importar o repo `nunoadsoares/mtaexams`
+3. Framework: `Next.js` (detetado automaticamente)
+4. Clicar em `Deploy`
+
+URL final fica no dominio da Vercel, por exemplo:
+`https://mtaexams.vercel.app`
+
+## Nota sobre persistencia na Vercel
+
+- A app usa store em ficheiro local.
+- Em Vercel, o ficheiro corre em `/tmp`, por isso os dados podem resetar entre cold starts/deploys.
+- Para persistencia total em producao, o passo seguinte e ligar um storage externo (KV/Postgres).
 
 ## Scripts uteis
 
 ```bash
 npm run lint
 npm run build
-npm run db:push
-npm run db:studio
 ```

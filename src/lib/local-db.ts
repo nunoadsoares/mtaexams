@@ -131,6 +131,15 @@ function findProjectRoot(startDir: string): string {
 }
 
 function getStorePath(): string {
+  const explicitStorePath = process.env.QUIZ_STORE_PATH?.trim();
+  if (explicitStorePath) {
+    return path.resolve(explicitStorePath);
+  }
+
+  if (process.env.VERCEL === "1") {
+    return path.join("/tmp", "quiz-store.json");
+  }
+
   const rootDir = findProjectRoot(process.cwd());
   return path.join(rootDir, "data", "quiz-store.json");
 }
@@ -142,6 +151,19 @@ async function ensureStoreFile(): Promise<string> {
   try {
     await fs.access(storePath);
   } catch {
+    const rootDir = findProjectRoot(process.cwd());
+    const seedStorePath = path.join(rootDir, "data", "quiz-store.json");
+
+    if (path.resolve(seedStorePath) !== path.resolve(storePath)) {
+      try {
+        const seeded = await fs.readFile(seedStorePath, "utf8");
+        await fs.writeFile(storePath, seeded, "utf8");
+        return storePath;
+      } catch {
+        // If no seed exists, fall through and create an empty store.
+      }
+    }
+
     await fs.writeFile(storePath, JSON.stringify(EMPTY_STORE, null, 2), "utf8");
   }
 
