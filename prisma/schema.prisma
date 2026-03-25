@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Document {
+  id         String     @id @default(cuid())
+  title      String
+  filePath   String     @unique
+  fileType   String
+  importedAt DateTime   @default(now())
+  rawText    String?
+  questions  Question[]
+}
+
+model Question {
+  id            String           @id @default(cuid())
+  documentId    String?
+  prompt        String
+  explanation   String?
+  topic         String           @default("General")
+  difficulty    String           @default("medium")
+  questionType  String           @default("multiple_choice")
+  correctAnswer String
+  sourceHash    String           @unique
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  document      Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  options       QuestionOption[]
+  quizAnswers   QuizAnswer[]
+  stats         QuestionStats?
+
+  @@index([topic])
+  @@index([difficulty])
+}
+
+model QuestionOption {
+  id         String   @id @default(cuid())
+  questionId String
+  label      String
+  text       String
+  sortOrder  Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model QuizSession {
+  id             String       @id @default(cuid())
+  mode           String
+  topicFilter    String?
+  score          Int          @default(0)
+  totalQuestions Int          @default(0)
+  startedAt      DateTime     @default(now())
+  endedAt        DateTime?
+  quizAnswers    QuizAnswer[]
+
+  @@index([mode])
+  @@index([startedAt])
+}
+
+model QuizAnswer {
+  id             String      @id @default(cuid())
+  sessionId      String
+  questionId     String
+  selectedAnswer String
+  isCorrect      Boolean
+  responseTimeMs Int?
+  answeredAt     DateTime    @default(now())
+  session        QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question       Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([questionId])
+}
+
+model QuestionStats {
+  id          String   @id @default(cuid())
+  questionId  String   @unique
+  timesSeen   Int      @default(0)
+  timesCorrect Int     @default(0)
+  timesWrong  Int      @default(0)
+  lastSeenAt  DateTime?
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model TopicStats {
+  id          String   @id @default(cuid())
+  topic       String   @unique
+  timesSeen   Int      @default(0)
+  timesCorrect Int     @default(0)
+  timesWrong  Int      @default(0)
+  lastSeenAt  DateTime?
+}
