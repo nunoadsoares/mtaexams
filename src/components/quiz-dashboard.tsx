@@ -365,18 +365,18 @@ export function QuizDashboard() {
                 </div>
               </div>
 
-              <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(22,33,58,0.85),rgba(13,18,30,0.92))] p-4">
-                <p className="text-xs uppercase tracking-[0.22em] text-[#9fb8e8]">Mood</p>
-                <div className="mt-3 flex items-end justify-center">
-                  <Image
-                    src="/Niggachad_normal.png"
-                    alt="Mascote normal"
-                    width={260}
-                    height={260}
-                    className="h-auto w-[170px] object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.45)] sm:w-[210px]"
-                    priority
-                  />
-                </div>
+              <div className="flex flex-col items-center justify-end pt-1">
+                <p className="text-center text-[11px] uppercase tracking-[0.22em] text-[#9fb8e8]">
+                  A cara da app
+                </p>
+                <Image
+                  src="/Niggachad_normal.png"
+                  alt="Mascote normal"
+                  width={420}
+                  height={420}
+                  className="mt-1 h-auto w-[230px] object-contain drop-shadow-[0_22px_36px_rgba(0,0,0,0.5)] sm:w-[300px] lg:w-[340px]"
+                  priority
+                />
               </div>
             </div>
           </div>
@@ -579,15 +579,13 @@ export function QuizDashboard() {
                   </div>
                 ) : null}
 
-                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(20,30,52,0.9),rgba(11,16,28,0.95))] p-3">
-                  <Image
-                    src={sessionReport.passed ? "/Niggachad_happy.png" : "/Niggachad_angry.png"}
-                    alt={sessionReport.passed ? "Mascote feliz" : "Mascote zangada"}
-                    width={220}
-                    height={220}
-                    className="h-auto w-[130px] object-contain drop-shadow-[0_14px_22px_rgba(0,0,0,0.45)] sm:w-[170px]"
-                  />
-                </div>
+                <Image
+                  src={sessionReport.passed ? "/Niggachad_happy.png" : "/Niggachad_angry.png"}
+                  alt={sessionReport.passed ? "Mascote feliz" : "Mascote zangada"}
+                  width={420}
+                  height={420}
+                  className="h-auto w-[190px] object-contain drop-shadow-[0_22px_36px_rgba(0,0,0,0.55)] sm:w-[260px] lg:w-[300px]"
+                />
               </div>
             </div>
           </div>
