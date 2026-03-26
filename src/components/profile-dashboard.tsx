@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { getLocalProfileSummary } from "@/lib/client-progress";
 
 type ProfileSummary = {
   global: {
@@ -77,21 +78,41 @@ export function ProfileDashboard() {
       setIsLoading(true);
       setError("");
 
-      const response = await fetch("/api/profile/summary");
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Não foi possível carregar o perfil.");
-        setIsLoading(false);
-        return;
+      const localProfile = getLocalProfileSummary();
+      if (localProfile.global.totalSessions > 0) {
+        setProfile(localProfile);
       }
 
-      setProfile({
-        global: data.global,
-        gamification: data.gamification,
-        recentSessions: data.recentSessions,
-      });
-      setIsLoading(false);
+      try {
+        const response = await fetch("/api/profile/summary");
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (localProfile.global.totalSessions === 0) {
+            setError(data.error || "Não foi possível carregar o perfil.");
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        const serverProfile = {
+          global: data.global,
+          gamification: data.gamification,
+          recentSessions: data.recentSessions,
+        } as ProfileSummary;
+
+        setProfile(
+          localProfile.global.totalSessions >= serverProfile.global.totalSessions
+            ? localProfile
+            : serverProfile
+        );
+      } catch {
+        if (localProfile.global.totalSessions === 0) {
+          setError("Não foi possível carregar o perfil.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     void fetchProfile();

@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { getLocalOverviewStats, saveLocalSession } from "@/lib/client-progress";
 
 type StatsResponse = {
   completedSessions: number;
@@ -63,6 +65,7 @@ function normalizeAnswerSet(values: string[]): string[] {
 export function QuizDashboard() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [mode, setMode] = useState<"random" | "wrong_only" | "unseen_only">("random");
+  const [sessionMode, setSessionMode] = useState<"random" | "wrong_only" | "unseen_only">("random");
   const [limit, setLimit] = useState(20);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
@@ -107,18 +110,29 @@ export function QuizDashboard() {
   }, []);
 
   async function refreshStats() {
-    const response = await fetch("/api/stats/overview");
-    const data = await response.json();
+    const localStats = getLocalOverviewStats();
 
-    if (!response.ok) {
-      return;
+    try {
+      const response = await fetch("/api/stats/overview");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setStats(localStats);
+        return;
+      }
+
+      const serverStats = {
+        completedSessions: data.completedSessions,
+        passRate: data.passRate,
+        accuracy: data.accuracy,
+      };
+
+      setStats(
+        localStats.completedSessions >= serverStats.completedSessions ? localStats : serverStats
+      );
+    } catch {
+      setStats(localStats);
     }
-
-    setStats({
-      completedSessions: data.completedSessions,
-      passRate: data.passRate,
-      accuracy: data.accuracy,
-    });
   }
 
   async function startQuiz(nextLimit: number) {
@@ -142,6 +156,7 @@ export function QuizDashboard() {
     }
 
     const payload = data as QuizStartResponse;
+    setSessionMode(mode);
     setSessionId(payload.sessionId);
     setQuizQuestions(payload.questions);
     setDraftSelections({});
@@ -231,6 +246,14 @@ export function QuizDashboard() {
       accuracy: data.accuracy,
       correctAnswers: data.correctAnswers,
       wrongAnswers: data.wrongAnswers,
+      passed: data.passed,
+      passThreshold: data.passThreshold,
+    });
+    saveLocalSession({
+      mode: sessionMode,
+      score: data.score,
+      totalQuestions: data.total,
+      accuracy: data.accuracy,
       passed: data.passed,
       passThreshold: data.passThreshold,
     });
@@ -339,6 +362,20 @@ export function QuizDashboard() {
                     <p className="text-[11px] uppercase tracking-[0.18em] text-[#6d83ac]">Acc</p>
                     <p className="mt-1 text-2xl font-semibold text-[#9be0b0]">{stats?.accuracy ?? "--"}%</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(22,33,58,0.85),rgba(13,18,30,0.92))] p-4">
+                <p className="text-xs uppercase tracking-[0.22em] text-[#9fb8e8]">Mood</p>
+                <div className="mt-3 flex items-end justify-center">
+                  <Image
+                    src="/Niggachad_normal.png"
+                    alt="Mascote normal"
+                    width={260}
+                    height={260}
+                    className="h-auto w-[170px] object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.45)] sm:w-[210px]"
+                    priority
+                  />
                 </div>
               </div>
             </div>
@@ -529,18 +566,30 @@ export function QuizDashboard() {
               </p>
             </div>
 
-            {!sessionReport.passed ? (
-              <div className="flex w-full justify-center sm:w-auto sm:justify-end">
-                <div className="relative h-40 w-28 rounded-xl border-2 border-[#ff5d5d] bg-[linear-gradient(180deg,#ff5d5d_0%,#c51f2c_100%)] shadow-[0_16px_35px_rgba(197,31,44,0.45)] sm:rotate-[-8deg]">
-                  <span className="absolute left-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/60 bg-white/10 text-xs font-bold text-white">
-                    !
-                  </span>
-                  <p className="absolute bottom-4 left-0 w-full text-center text-xs font-bold uppercase tracking-[0.18em] text-white">
-                    CHUMBASTE
-                  </p>
+            <div className="flex w-full justify-center sm:w-auto sm:justify-end">
+              <div className="flex items-end gap-4">
+                {!sessionReport.passed ? (
+                  <div className="relative h-40 w-28 rounded-xl border-2 border-[#ff5d5d] bg-[linear-gradient(180deg,#ff5d5d_0%,#c51f2c_100%)] shadow-[0_16px_35px_rgba(197,31,44,0.45)] sm:rotate-[-8deg]">
+                    <span className="absolute left-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/60 bg-white/10 text-xs font-bold text-white">
+                      !
+                    </span>
+                    <p className="absolute bottom-4 left-0 w-full text-center text-xs font-bold uppercase tracking-[0.18em] text-white">
+                      CHUMBASTE
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(20,30,52,0.9),rgba(11,16,28,0.95))] p-3">
+                  <Image
+                    src={sessionReport.passed ? "/Niggachad_happy.png" : "/Niggachad_angry.png"}
+                    alt={sessionReport.passed ? "Mascote feliz" : "Mascote zangada"}
+                    width={220}
+                    height={220}
+                    className="h-auto w-[130px] object-contain drop-shadow-[0_14px_22px_rgba(0,0,0,0.45)] sm:w-[170px]"
+                  />
                 </div>
               </div>
-            ) : null}
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
